@@ -108,11 +108,14 @@ button {
    ========================================================================== */
 .site-wrapper {
     width: 100%;
-    max-width: 1240px;
-    margin: auto;
+    max-width: 1440px;
+    margin: 0 auto;
 }
 
 .main-card {
+    width: 100%;
+    min-height: 100vh;
+
     background: var(--card-bg-gradient);
     border: 1px solid var(--card-border);
     border-radius: var(--radius-card);
@@ -910,6 +913,7 @@ button {
     }
 
     .utility-links.is-open {
+        display: block;
         opacity: 1;
         visibility: visible;
         transform: translateY(0);
