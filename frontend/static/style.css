@@ -120,7 +120,6 @@ button {
     display: flex;
     flex-direction: column;
     position: relative;
-    overflow: hidden;
 }
 
 /* Brilho decorativo sutil no topo do card */
@@ -136,17 +135,51 @@ button {
 }
 
 /* ==========================================================================
-   CABEÇALHO / NAVBAR (DENTRO DO CARD PRINCIPAL)
+   CABEÇALHO / NAVBAR (STICKY DENTRO DO CARD PRINCIPAL)
    ========================================================================== */
 .card-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0;
+    transition: padding var(--transition-smooth);
+}
+
+.header-inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 1.25rem 2.5rem;
-    border-bottom: 1px solid rgba(38, 38, 38, 0.07);
     gap: 1.5rem;
-    position: relative;
-    z-index: 20;
+    border-bottom: 1px solid rgba(38, 38, 38, 0.07);
+    background: transparent;
+    border-radius: 0;
+    transition:
+        border-radius var(--transition-smooth),
+        box-shadow var(--transition-smooth),
+        background-color var(--transition-smooth),
+        border-color var(--transition-smooth),
+        padding var(--transition-smooth),
+        margin var(--transition-smooth);
+}
+
+/* Estado com scroll: header "flutua" como pill com glassmorphism */
+.card-header.header-scrolled {
+    padding: 0.5rem 1rem 0;
+}
+
+.card-header.header-scrolled .header-inner {
+    border-radius: var(--radius-card);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow:
+        0 8px 32px -8px rgba(0, 0, 0, 0.18),
+        0 0 0 1px rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background-color: rgba(255, 255, 255, 0.82);
+    padding: 0.85rem 2rem;
+    margin-bottom: 0.25rem;
+    margin: 0px 2rem;
 }
 
 /* Marca / Logotipo */
@@ -770,7 +803,7 @@ button {
 
 /* Telas Médias / Tablets (<= 992px) */
 @media (max-width: 992px) {
-    .card-header {
+    .header-inner {
         padding: 1.25rem 1.75rem;
     }
 
@@ -824,9 +857,19 @@ button {
         margin: 0;
     }
 
-    .card-header {
+    .header-inner {
         padding: 0.85rem 1rem;
         gap: 0.75rem;
+        position: relative;
+    }
+
+    .card-header.header-scrolled {
+        padding: 0.35rem 0.5rem 0;
+    }
+
+    .card-header.header-scrolled .header-inner {
+        border-radius: var(--radius-lg);
+        padding: 0.7rem 1rem;
     }
 
     .brand-icon {

@@ -57,4 +57,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     });
+
+    // 3. Header Responsivo ao Scroll
+    const siteHeader = document.getElementById('site-header');
+    const SCROLL_THRESHOLD = 60;
+    let isScrolled = false;
+
+    if (siteHeader) {
+        const handleScroll = () => {
+            const shouldBeScrolled = window.scrollY > SCROLL_THRESHOLD;
+
+            if (shouldBeScrolled !== isScrolled) {
+                isScrolled = shouldBeScrolled;
+                siteHeader.classList.toggle('header-scrolled', isScrolled);
+            }
+        };
+
+        // Usar passive listener para performance
+        window.addEventListener('scroll', handleScroll, { passive: true });
+
+        // Checar estado inicial (caso a página carregue já com scroll)
+        handleScroll();
+    }
 });
