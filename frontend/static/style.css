@@ -887,7 +887,6 @@ button {
 
     /* Menu Colapsável no Mobile */
     .utility-links {
-        display: none;
         position: absolute;
         top: 100%;
         left: 0;
@@ -899,10 +898,21 @@ button {
         border-bottom: 1px solid rgba(38, 38, 38, 0.1);
         box-shadow: 0 16px 30px rgba(0, 0, 0, 0.12);
         z-index: 30;
+
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+
+        transition:
+            opacity 0.3s ease,
+            transform 0.3s ease,
+            visibility 0.3s ease;
     }
 
     .utility-links.is-open {
-        display: block;
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
     }
 
     .options {
