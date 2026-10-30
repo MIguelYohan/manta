@@ -22,8 +22,6 @@ model User {
   applications Application[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-
-  @@map("users")
 }
 
 model Application {
@@ -44,5 +42,4 @@ model Application {
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
-  @@map("applications")
 }
