@@ -1,6 +1,30 @@
-# npm
-node_modules
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Credentials & Keys
+*.pem
+*.key
+*.cert
+*.crt
+
+# Node & dependencies
+node_modules/
 package-lock.json
 npm-shrinkwrap.json
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Prisma generated client
+/generated/prisma
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
 *.gz
