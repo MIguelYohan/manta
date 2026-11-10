@@ -11,12 +11,10 @@ import {
  */
 
 /**
- * Extrai o identificador do usuário da requisição.
- * Prioriza o usuário injetado pelo middleware de autenticação (req.user.id),
- * permitindo também um header temporário ('x-user-id') para testes antes do JWT.
+ * Extrai o identificador do usuário autenticado provido pelo authMiddleware.
  */
 function extractUserId(req) {
-    return req.user?.id || req.headers['x-user-id'] || req.query.userId;
+    return req.user?.id;
 }
 
 /**

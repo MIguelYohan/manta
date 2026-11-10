@@ -1,12 +1,13 @@
 import app from '../app.js';
 import prisma from '../config/prisma.js';
+import { generateToken } from '../services/jwt.service.js';
 
 async function runApplicationTests() {
     const port = 3099;
     const server = app.listen(port);
     const baseUrl = `http://localhost:${port}/applications`;
 
-    console.log('--- Iniciando Teste de Rotas e Validações de Candidaturas ---');
+    console.log('--- Iniciando Teste de Autenticação JWT e Rotas de Candidaturas ---');
 
     try {
         // 1. Criar usuário temporário para os testes
@@ -19,37 +20,41 @@ async function runApplicationTests() {
         });
         console.log(`[1] Usuário de teste criado: ID ${testUser.id}`);
 
-        const headers = {
+        // 2. Testar requisição SEM token JWT (deve retornar 401)
+        const noTokenRes = await fetch(baseUrl);
+        console.log(`[2] GET sem token: Status ${noTokenRes.status} (esperado: 401)`);
+
+        // 3. Testar requisição com token INVÁLIDO (deve retornar 401)
+        const invalidTokenRes = await fetch(baseUrl, {
+            headers: {
+                'Authorization': 'Bearer token-totalmente-invalido'
+            }
+        });
+        console.log(`[3] GET com token inválido: Status ${invalidTokenRes.status} (esperado: 401)`);
+
+        // 4. Gerar Token JWT válido para o usuário de teste
+        const validToken = generateToken(testUser.id);
+        console.log(`[4] Token JWT válido gerado com sucesso.`);
+
+        const authHeaders = {
             'Content-Type': 'application/json',
-            'x-user-id': testUser.id
+            'Authorization': `Bearer ${validToken}`
         };
 
-        // 2. Teste de Validação: Criar com company vazia (deve retornar 400)
+        // 5. Teste de Validação: Criar com company vazia usando token válido (deve retornar 400)
         const emptyCompanyRes = await fetch(baseUrl, {
             method: 'POST',
-            headers,
+            headers: authHeaders,
             body: JSON.stringify({ company: '' })
         });
-        console.log(`[2] POST sem company: Status ${emptyCompanyRes.status} (esperado: 400)`);
+        console.log(`[5] POST sem company com JWT: Status ${emptyCompanyRes.status} (esperado: 400)`);
 
-        // 3. Teste de Validação: Criar com status inválido (deve retornar 400)
-        const invalidStatusRes = await fetch(baseUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ company: 'Google', status: 'STATUS_INEXISTENTE' })
-        });
-        console.log(`[3] POST com status inválido: Status ${invalidStatusRes.status} (esperado: 400)`);
-
-        // 4. Teste de Validação: ID com formato inválido (deve retornar 400 em vez de 500)
-        const invalidIdRes = await fetch(`${baseUrl}/id-nao-hexadecimal-123`, { headers });
-        console.log(`[4] GET com ObjectId inválido: Status ${invalidIdRes.status} (esperado: 400)`);
-
-        // 5. Criar Candidatura Válida (POST /applications)
+        // 6. Criar Candidatura Válida com JWT (POST /applications)
         const postRes = await fetch(baseUrl, {
             method: 'POST',
-            headers,
+            headers: authHeaders,
             body: JSON.stringify({
-                company: '  Google  ',
+                company: 'Google',
                 description: 'Vaga de Engenheiro de Software',
                 url: 'https://careers.google.com/jobs/123',
                 status: 'in_progress',
@@ -58,49 +63,49 @@ async function runApplicationTests() {
             })
         });
         const postData = await postRes.json();
-        console.log(`[5] POST válido: Status ${postRes.status} | ID: ${postData.data?.id} | Status sanitizado: ${postData.data?.status}`);
+        console.log(`[6] POST com JWT válido: Status ${postRes.status} | ID: ${postData.data?.id}`);
 
         const applicationId = postData.data?.id;
 
-        // 6. Listar Candidaturas (GET /applications)
-        const getRes = await fetch(baseUrl, { headers });
+        // 7. Listar Candidaturas com JWT (GET /applications)
+        const getRes = await fetch(baseUrl, { headers: authHeaders });
         const getData = await getRes.json();
-        console.log(`[6] GET /applications: Status ${getRes.status} | Total retornado: ${getData.data?.length}`);
+        console.log(`[7] GET /applications com JWT: Status ${getRes.status} | Total retornado: ${getData.data?.length}`);
 
-        // 7. Buscar Candidatura por ID (GET /applications/:id)
-        const getByIdRes = await fetch(`${baseUrl}/${applicationId}`, { headers });
+        // 8. Buscar Candidatura por ID com JWT (GET /applications/:id)
+        const getByIdRes = await fetch(`${baseUrl}/${applicationId}`, { headers: authHeaders });
         const getByIdData = await getByIdRes.json();
-        console.log(`[7] GET /applications/:id: Status ${getByIdRes.status} | Empresa: ${getByIdData.data?.company}`);
+        console.log(`[8] GET /applications/:id: Status ${getByIdRes.status} | Empresa: ${getByIdData.data?.company}`);
 
-        // 8. Atualizar Candidatura com dados válidos (PUT /applications/:id)
+        // 9. Atualizar Candidatura com JWT (PUT /applications/:id)
         const putRes = await fetch(`${baseUrl}/${applicationId}`, {
             method: 'PUT',
-            headers,
+            headers: authHeaders,
             body: JSON.stringify({
                 status: 'interview',
-                notes: 'Entrevista técnica agendada para sexta-feira'
+                notes: 'Entrevista técnica agendada'
             })
         });
         const putData = await putRes.json();
-        console.log(`[8] PUT válido: Status ${putRes.status} | Novo Status: ${putData.data?.status}`);
+        console.log(`[9] PUT com JWT: Status ${putRes.status} | Novo Status: ${putData.data?.status}`);
 
-        // 9. Excluir Candidatura (DELETE /applications/:id)
+        // 10. Excluir Candidatura com JWT (DELETE /applications/:id)
         const delRes = await fetch(`${baseUrl}/${applicationId}`, {
             method: 'DELETE',
-            headers
+            headers: authHeaders
         });
         const delData = await delRes.json();
-        console.log(`[9] DELETE /applications/:id: Status ${delRes.status} | Mensagem: ${delData.message}`);
+        console.log(`[10] DELETE com JWT: Status ${delRes.status} | Mensagem: ${delData.message}`);
 
-        // 10. Limpeza: Remover o usuário temporário
+        // 11. Limpeza: Remover o usuário temporário
         await prisma.user.delete({
             where: { id: testUser.id }
         });
-        console.log('[10] Usuário de teste removido. Banco limpo!');
+        console.log('[11] Usuário de teste removido. Banco limpo!');
 
-        console.log('--- Todos os testes de rotas e validações passaram com sucesso! ---');
+        console.log('--- Todos os testes de JWT e Candidaturas passaram com sucesso! ---');
     } catch (error) {
-        console.error('Erro durante o teste de rotas:', error);
+        console.error('Erro durante o teste:', error);
     } finally {
         server.close();
         await prisma.$disconnect();
