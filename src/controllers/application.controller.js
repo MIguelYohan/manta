@@ -1,8 +1,13 @@
 import ApplicationModel from '../models/application.js';
+import {
+    validateObjectId,
+    validateCreateApplication,
+    validateUpdateApplication
+} from '../validators/application.validator.js';
 
 /**
  * Controller responsável pelo fluxo de requisições e respostas das Candidaturas (Applications).
- * Valida a identidade do usuário, aciona o Model correspondente e formata o retorno HTTP.
+ * Valida a identidade do usuário e os dados de entrada via Validators antes de acionar o Model.
  */
 
 /**
@@ -72,6 +77,13 @@ export async function getById(req, res) {
         }
 
         const { id } = req.params;
+
+        // Validação do formato do ObjectId do MongoDB
+        const idValidation = validateObjectId(id);
+        if (idValidation.status === 'error') {
+            return res.status(400).json(idValidation);
+        }
+
         const application = await ApplicationModel.findById(userId, id);
 
         if (!application) {
@@ -94,7 +106,6 @@ export async function getById(req, res) {
     }
 }
 
-// REVISAR AQUI 🚨🚨🚨🚨
 /**
  * Cria uma nova candidatura para o usuário autenticado.
  */
@@ -108,25 +119,16 @@ export async function create(req, res) {
             });
         }
 
-        const { company, description, url, status, priority, resumeUrl, notes } = req.body;
-
-        // Validação mínima de campo essencial no controller
-        if (!company || typeof company !== 'string' || company.trim() === '') {
+        // Validação completa dos dados de entrada
+        const validation = validateCreateApplication(req.body);
+        if (validation.status === 'error') {
             return res.status(400).json({
                 status: 'error',
-                message: "O campo 'company' é obrigatório e deve ser preenchido."
+                message: validation.message
             });
         }
 
-        const newApplication = await ApplicationModel.create(userId, {
-            company: company.trim(),
-            description,
-            url,
-            status,
-            priority: Number.isInteger(priority) ? priority : 0,
-            resumeUrl,
-            notes
-        });
+        const newApplication = await ApplicationModel.create(userId, validation.sanitizedData);
 
         return res.status(201).json({
             status: 'success',
@@ -156,16 +158,23 @@ export async function update(req, res) {
         }
 
         const { id } = req.params;
-        const updateData = req.body;
 
-        if (!updateData || Object.keys(updateData).length === 0) {
+        // Validação do formato do ObjectId do MongoDB
+        const idValidation = validateObjectId(id);
+        if (idValidation.status === 'error') {
+            return res.status(400).json(idValidation);
+        }
+
+        // Validação dos dados a atualizar
+        const validation = validateUpdateApplication(req.body);
+        if (validation.status === 'error') {
             return res.status(400).json({
                 status: 'error',
-                message: 'Nenhum dado fornecido para atualização.'
+                message: validation.message
             });
         }
 
-        const updatedApplication = await ApplicationModel.update(userId, id, updateData);
+        const updatedApplication = await ApplicationModel.update(userId, id, validation.sanitizedData);
 
         if (!updatedApplication) {
             return res.status(404).json({
@@ -202,6 +211,13 @@ export async function remove(req, res) {
         }
 
         const { id } = req.params;
+
+        // Validação do formato do ObjectId do MongoDB
+        const idValidation = validateObjectId(id);
+        if (idValidation.status === 'error') {
+            return res.status(400).json(idValidation);
+        }
+
         const deletedApplication = await ApplicationModel.remove(userId, id);
 
         if (!deletedApplication) {
