@@ -1,5 +1,6 @@
 import express from 'express';
 import prisma from '../config/prisma.js';
+import { getAll, getById, create, update, remove } from '../controllers/application.controller.js';
 
 const router = express.Router();
 
@@ -8,11 +9,6 @@ const router = express.Router();
 */
 router.get('/health', (req, res) => {
     res.send({ status: 'API Running OK!' });
-});
-
-router.post('/login', async (req, res) => {
-    // Rota de teste/preparação para Google OAuth
-    res.status(501).json({ message: 'A autenticação será implementada via Google OAuth.' });
 });
 
 export default router;

@@ -1,33 +1,37 @@
 import { verifyToken } from '../services/jwt.service.js';
 
 /**
- * Middleware de Autenticação JWT.
+ * Middleware de Autenticação Híbrido (Cookies HttpOnly + Bearer Token).
  * 
- * Intercepta requisições HTTP, valida o cabeçalho Authorization no padrão Bearer Token,
- * verifica a autenticidade do token JWT e injeta os dados do usuário em `req.user`.
+ * Intercepta requisições HTTP, obtém o token JWT a partir do Cookie HttpOnly (navegador)
+ * ou do cabeçalho Authorization (Bearer Token), valida sua autenticidade e injeta
+ * os dados do usuário em `req.user`.
  * 
  * Se o token for ausente, expirado ou inválido, interrompe o fluxo com status 401.
  */
 export default function authMiddleware(req, res, next) {
-    const authHeader = req.headers.authorization;
+    let token = null;
 
-    if (!authHeader) {
+    // 1. Tenta extrair o token do Cookie HttpOnly
+    if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;
+    }
+
+    // 2. Fallback: Se não estiver no cookie, tenta extrair do cabeçalho Authorization: Bearer <token>
+    if (!token && req.headers.authorization) {
+        const parts = req.headers.authorization.split(' ');
+        if (parts.length === 2 && parts[0] === 'Bearer') {
+            token = parts[1];
+        }
+    }
+
+    // Se nenhum token foi encontrado
+    if (!token) {
         return res.status(401).json({
             status: 'error',
             message: 'Acesso negado: token de autenticação não fornecido.'
         });
     }
-
-    const parts = authHeader.split(' ');
-
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-        return res.status(401).json({
-            status: 'error',
-            message: 'Formato de token inválido. Esperado: Bearer <token>.'
-        });
-    }
-
-    const token = parts[1];
 
     try {
         const decoded = verifyToken(token);

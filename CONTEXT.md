@@ -249,9 +249,5 @@ manta/
 
 ## 8. Decisões Pendentes
 
-- Definir estratégia de geração, expiração e renovação dos JWTs.
-- Definir estrutura definitiva dos documentos no MongoDB.
-- Definir armazenamento e gerenciamento dos currículos.
 - Definir modelo de prioridades.
 - Definir integração com plataformas externas.
-- Definir padronização das respostas e erros da API.
