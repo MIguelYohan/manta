@@ -226,23 +226,31 @@ manta/
 
 ## 7. Estado Atual do Desenvolvimento
 
+### Implementado
+
+- Configuração do MongoDB e integração do Prisma com o banco de dados.
+- Modelos de `User` e `Application`, incluindo o relacionamento entre usuário e candidaturas.
+- Autenticação por Google OAuth / OpenID Connect.
+- Criação e atualização automática do usuário a partir da identidade Google.
+- Geração e validação de JWT próprio do Manta.
+- Autenticação de rotas por cookie `HttpOnly` ou cabeçalho `Authorization: Bearer`.
+- Endpoint de consulta do usuário autenticado (`GET /auth/me`) e logout (`POST /auth/logout`).
+- API de candidaturas protegida, com criação, listagem, consulta individual, atualização e exclusão.
+- Isolamento de candidaturas por usuário autenticado.
+- Filtros de listagem por status e empresa, além de ordenação por data de criação ou prioridade.
+- Validação dos dados de candidaturas, IDs MongoDB, URLs, status e prioridades.
+- Testes manuais básicos para usuários, autenticação e candidaturas.
+
 ### Em desenvolvimento
 
-- API de usuários.
-- API de autenticação.
-- Configuração do MongoDB.
-- Integração do Prisma com o banco de dados.
-- Integração com Google OAuth.
-- Geração e validação de JWT.
+- Interface React do usuário, inicialmente com telas simples para validar todos os fluxos do backend.
 
 ### Planejado
 
-- API de candidaturas.
-- Gerenciamento de currículos.
-- Gerenciamento de prioridades.
-- Gerenciamento de status.
-- Sistema de anotações.
-- Interface React.
+- Upload e gerenciamento de arquivos de currículo (no momento, a candidatura armazena apenas uma URL de currículo).
+- Evolução do gerenciamento de prioridades.
+- Evolução do gerenciamento de status.
+- Sistema de anotações com registros individuais e histórico.
 - Integrações com plataformas de recrutamento.
 
 ---
