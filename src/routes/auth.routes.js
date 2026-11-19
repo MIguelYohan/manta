@@ -1,5 +1,7 @@
 import express from 'express';
 import {
+    register,
+    login,
     googleLogin,
     googleCallback,
     getMe,
@@ -10,9 +12,15 @@ import authMiddleware from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
 /**
- * Rotas de Autenticação (Google OAuth + Sessão JWT)
+ * Rotas de Autenticação Híbrida (E-mail/Senha + Google OAuth)
  * Prefixo configurado no app: /auth
  */
+
+// Cadastro convencional com e-mail e senha
+router.post('/register', register);
+
+// Login convencional com e-mail e senha
+router.post('/login', login);
 
 // Inicia o fluxo de login redirecionando para o Google
 router.get('/google', googleLogin);

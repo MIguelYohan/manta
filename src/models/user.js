@@ -2,12 +2,11 @@ import prisma from '../config/prisma.js';
 
 /**
  * Model responsável pelas operações de banco de dados do Usuário (User).
- * Gerencia a persistência dos dados de identificação providos pelo Google OAuth.
+ * Suporta autenticação híbrida: Google OAuth e credenciais convencionais (E-mail e Senha).
  */
 
 /**
  * Busca um usuário pelo ID único interno do MongoDB (ObjectId).
- * Utilizado principalmente pelo middleware de autenticação JWT e consulta de perfil.
  * 
  * @param {string} id - ID do usuário no MongoDB.
  * @returns {Promise<object|null>} Usuário encontrado ou null.
@@ -20,7 +19,6 @@ export async function findById(id) {
 
 /**
  * Busca um usuário pelo identificador único da conta Google (googleId / claim 'sub').
- * Utilizado durante o fluxo de login via Google OAuth.
  * 
  * @param {string} googleId - Identificador único retornado pelo Google.
  * @returns {Promise<object|null>} Usuário encontrado ou null.
@@ -39,29 +37,25 @@ export async function findByGoogleId(googleId) {
  */
 export async function findByEmail(email) {
     return await prisma.user.findUnique({
-        where: { email }
+        where: { email: email.toLowerCase() }
     });
 }
 
 /**
- * Cria um novo usuário no banco de dados após a primeira autenticação via Google.
+ * Cria um novo usuário cadastrado com E-mail e Senha.
  * 
- * @param {object} userData - Dados do usuário.
- * @param {string} userData.googleId - Identificador único do Google.
- * @param {string} userData.email - E-mail retornado pelo Google.
- * @param {string} [userData.name] - Nome completo do usuário.
- * @param {string} [userData.picture] - URL da foto de perfil.
+ * @param {object} userData
+ * @param {string} userData.email - E-mail do usuário.
+ * @param {string} userData.password - Senha criptografada (hash).
+ * @param {string} [userData.name] - Nome do usuário.
  * @returns {Promise<object>} Usuário criado.
  */
-export async function create(userData) {
-    const { googleId, email, name, picture } = userData;
-
+export async function createWithPassword({ email, password, name }) {
     return await prisma.user.create({
         data: {
-            googleId,
-            email,
-            name,
-            picture
+            email: email.toLowerCase().trim(),
+            password,
+            name: name ? name.trim() : null
         }
     });
 }
@@ -74,7 +68,6 @@ export async function create(userData) {
  * @returns {Promise<object>} Usuário atualizado.
  */
 export async function update(id, data) {
-    // Impede alteração acidental de chaves imutáveis
     const { id: _, googleId: __, createdAt, ...updateData } = data;
 
     return await prisma.user.update({
@@ -84,25 +77,47 @@ export async function update(id, data) {
 }
 
 /**
- * Localiza um usuário pelo googleId ou cria um novo registro caso não exista.
- * Atualiza automaticamente o nome e a foto caso tenham mudado no Google.
+ * Localiza um usuário pelo googleId ou email e atualiza/cria o registro.
+ * Vincula automaticamente o Google a um usuário já existente por e-mail.
  * 
  * @param {object} userData - Dados providos pelo Google OAuth.
- * @returns {Promise<object>} Usuário encontrado ou criado.
+ * @returns {Promise<object>} Usuário encontrado, vinculado ou criado.
  */
 export async function upsertByGoogle(userData) {
     const { googleId, email, name, picture } = userData;
+    const normalizedEmail = email.toLowerCase().trim();
 
-    return await prisma.user.upsert({
-        where: { googleId },
-        update: {
-            email,
-            name,
-            picture
-        },
-        create: {
+    // 1. Verifica se já existe por googleId
+    const existingByGoogle = await findByGoogleId(googleId);
+    if (existingByGoogle) {
+        return await prisma.user.update({
+            where: { id: existingByGoogle.id },
+            data: {
+                name: name || existingByGoogle.name,
+                picture: picture || existingByGoogle.picture
+            }
+        });
+    }
+
+    // 2. Se não achou por googleId, verifica se já existe uma conta por e-mail (cadastrada com senha)
+    const existingByEmail = await findByEmail(normalizedEmail);
+    if (existingByEmail) {
+        // Vincula o googleId à conta existente
+        return await prisma.user.update({
+            where: { id: existingByEmail.id },
+            data: {
+                googleId,
+                name: existingByEmail.name || name,
+                picture: existingByEmail.picture || picture
+            }
+        });
+    }
+
+    // 3. Se não existe por nenhum dos dois, cria um novo usuário
+    return await prisma.user.create({
+        data: {
             googleId,
-            email,
+            email: normalizedEmail,
             name,
             picture
         }
@@ -116,7 +131,6 @@ export async function upsertByGoogle(userData) {
  * @returns {Promise<object>} Usuário removido.
  */
 export async function remove(id) {
-    // Remove as candidaturas do usuário antes de remover a conta
     await prisma.application.deleteMany({
         where: { userId: id }
     });
@@ -130,7 +144,7 @@ export default {
     findById,
     findByGoogleId,
     findByEmail,
-    create,
+    createWithPassword,
     update,
     upsertByGoogle,
     remove

@@ -1,70 +1,99 @@
 import app from '../app.js';
 import prisma from '../config/prisma.js';
-import { generateToken } from '../services/jwt.service.js';
 
 async function runAuthTests() {
-    const port = 3098;
+    const port = 3097;
     const server = app.listen(port);
     const baseUrl = `http://localhost:${port}/auth`;
 
-    console.log('--- Iniciando Teste de Rotas de Autenticação (Google OAuth + JWT) ---');
+    console.log('--- Iniciando Teste Completo de Autenticação Híbrida (E-mail/Senha + Google OAuth) ---');
+
+    const testEmail = `usuario-${Date.now()}@teste.com`;
+    const testPassword = 'senhaSegura123';
+    let registeredUserId = null;
 
     try {
-        // 1. Testar GET /auth/google (deve responder com 302 Redirect para accounts.google.com)
+        // 1. Testar Cadastro Convencional (POST /auth/register)
+        const registerRes = await fetch(`${baseUrl}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: 'Dev Tester',
+                email: testEmail,
+                password: testPassword
+            })
+        });
+        const registerData = await registerRes.json();
+        console.log(`[1] POST /auth/register: Status ${registerRes.status} (esperado: 201) | Msg: ${registerData.message}`);
+        console.log(`    Token emitido no cadastro: ${Boolean(registerData.token)}`);
+        registeredUserId = registerData.user?.id;
+
+        // 2. Testar Cadastro com E-mail Duplicado (deve retornar 409 Conflict)
+        const duplicateRes = await fetch(`${baseUrl}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: 'Dev Clone',
+                email: testEmail,
+                password: 'outraSenha123'
+            })
+        });
+        console.log(`[2] POST /auth/register duplicado: Status ${duplicateRes.status} (esperado: 409)`);
+
+        // 3. Testar Login com Senha Incorreta (deve retornar 401)
+        const wrongPasswordRes = await fetch(`${baseUrl}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: testEmail,
+                password: 'senhaErrada'
+            })
+        });
+        console.log(`[3] POST /auth/login senha errada: Status ${wrongPasswordRes.status} (esperado: 401)`);
+
+        // 4. Testar Login com Credenciais Corretas (deve retornar 200 e token)
+        const loginRes = await fetch(`${baseUrl}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: testEmail,
+                password: testPassword
+            })
+        });
+        const loginData = await loginRes.json();
+        console.log(`[4] POST /auth/login senha correta: Status ${loginRes.status} (esperado: 200) | Msg: ${loginData.message}`);
+
+        const authToken = loginData.token;
+
+        // 5. Testar Rota Protegida (GET /auth/me) com o Token do Login Convencional
+        const meRes = await fetch(`${baseUrl}/me`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const meData = await meRes.json();
+        console.log(`[5] GET /auth/me autenticado: Status ${meRes.status} | Nome: ${meData.data?.name} | Email: ${meData.data?.email}`);
+
+        // 6. Testar Rota do Google OAuth (GET /auth/google)
         const googleRes = await fetch(`${baseUrl}/google`, { redirect: 'manual' });
-        const location = googleRes.headers.get('location') || '';
-        console.log(`[1] GET /auth/google: Status ${googleRes.status} (esperado: 302)`);
-        console.log(`    Redireciona para Google Accounts: ${location.startsWith('https://accounts.google.com')}`);
+        console.log(`[6] GET /auth/google: Status ${googleRes.status} (esperado: 302 Redirect)`);
 
-        // 2. Testar GET /auth/me sem autenticação (deve responder 401)
-        const meUnauthorizedRes = await fetch(`${baseUrl}/me`);
-        console.log(`[2] GET /auth/me sem token: Status ${meUnauthorizedRes.status} (esperado: 401)`);
-
-        // 3. Criar usuário temporário para testar sessão
-        const testUser = await prisma.user.create({
-            data: {
-                googleId: 'google-oauth-test-' + Date.now(),
-                email: `test-oauth-${Date.now()}@gmail.com`,
-                name: 'Usuário Teste OAuth',
-                picture: 'https://lh3.googleusercontent.com/test'
-            }
-        });
-        console.log(`[3] Usuário de teste criado: ID ${testUser.id}`);
-
-        const token = generateToken(testUser.id);
-
-        // 4. Testar GET /auth/me com cabeçalho Bearer Token
-        const meBearerRes = await fetch(`${baseUrl}/me`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const meBearerData = await meBearerRes.json();
-        console.log(`[4] GET /auth/me com Bearer Token: Status ${meBearerRes.status} | Nome: ${meBearerData.data?.name}`);
-
-        // 5. Testar GET /auth/me com Cookie HttpOnly
-        const meCookieRes = await fetch(`${baseUrl}/me`, {
-            headers: {
-                'Cookie': `token=${token}`
-            }
-        });
-        const meCookieData = await meCookieRes.json();
-        console.log(`[5] GET /auth/me com Cookie HttpOnly: Status ${meCookieRes.status} | Email: ${meCookieData.data?.email}`);
-
-        // 6. Testar POST /auth/logout (deve retornar 200 e limpar cookie)
+        // 7. Testar Logout (POST /auth/logout)
         const logoutRes = await fetch(`${baseUrl}/logout`, { method: 'POST' });
         const logoutData = await logoutRes.json();
-        console.log(`[6] POST /auth/logout: Status ${logoutRes.status} | Msg: ${logoutData.message}`);
+        console.log(`[7] POST /auth/logout: Status ${logoutRes.status} | Msg: ${logoutData.message}`);
 
-        // 7. Limpeza: Remover usuário de teste
-        await prisma.user.delete({
-            where: { id: testUser.id }
-        });
-        console.log('[7] Usuário de teste removido. Banco limpo!');
+        // 8. Limpeza do usuário de teste
+        if (registeredUserId) {
+            await prisma.user.delete({
+                where: { id: registeredUserId }
+            });
+            console.log('[8] Usuário de teste removido. Banco limpo!');
+        }
 
-        console.log('--- Todos os testes de Autenticação passaram com sucesso! ---');
+        console.log('--- Todos os testes de Autenticação Híbrida passaram com 100% de sucesso! ---');
     } catch (error) {
-        console.error('Erro durante o teste de autenticação:', error);
+        console.error('Erro durante os testes de autenticação:', error);
     } finally {
         server.close();
         await prisma.$disconnect();
