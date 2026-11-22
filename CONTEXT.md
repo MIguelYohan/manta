@@ -247,8 +247,18 @@ manta/
 
 ### Planejado
 
+- **Evolução do Schema de Candidaturas (Campos do Cartão de Candidatura):**
+  - No frontend, o cartão de candidatura foi implementado com atributos ricos e personalizáveis conforme o design (`Cartão de Candidatura Manta.png`). Os seguintes campos visuais foram adaptados e devem ser implementados de forma nativa no banco de dados e na API mais para frente:
+    - `role` / `title` (Título do cargo, ex: "Desenvolvedor Full Stack" — temporariamente mapeado no campo `description`).
+    - `tags` / `customTags` (Array de tags/badges personalizáveis: tecnologia, porte da empresa, etc.).
+    - `workModel` (Modelo de trabalho: Home Office, Presencial, Híbrido).
+    - `contractType` (Tipo de contrato: Tempo integral, Meio período, PJ, CLT).
+    - `location` (Localização da vaga, ex: "Brasília - DF").
 - Upload e gerenciamento de arquivos de currículo (no momento, a candidatura armazena apenas uma URL de currículo).
-- Evolução do gerenciamento de prioridades.
+- **Gerenciamento de Prioridades via Drag & Drop:**
+  - As candidaturas agora utilizam ordenação ordinal (`#1`, `#2`, `#3`, ...) diretamente no grid.
+  - A prioridade é reordenada arrastando e soltando os cartões (HTML5 Drag and Drop), sincronizando os números com a API.
+  - O modal de criação/edição foi simplificado (removidos os campos manuais de prioridade, tecnologias 1 e 2, e notas — que agora são editadas exclusivamente direto no cartão).
 - Evolução do gerenciamento de status.
 - Sistema de anotações com registros individuais e histórico.
 - Integrações com plataformas de recrutamento.
@@ -257,5 +267,6 @@ manta/
 
 ## 8. Decisões Pendentes
 
+- Definir migração do schema do Prisma para inclusão dos campos nativos de `role`, `workModel`, `contractType`, `location` e `tags` no MongoDB.
 - Definir modelo de prioridades.
 - Definir integração com plataformas externas.

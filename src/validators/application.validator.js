@@ -121,13 +121,13 @@ export function validateCreateApplication(data) {
         };
     }
 
-    // Campo opcional: priority
+    // Campo opcional: priority (número ordinal >= 0)
     let priority = 0;
     if (data.priority !== undefined && data.priority !== null) {
-        if (!Number.isInteger(data.priority) || data.priority < 0 || data.priority > 5) {
+        if (!Number.isInteger(data.priority) || data.priority < 0) {
             return {
                 status: 'error',
-                message: "O campo 'priority' deve ser um número inteiro entre 0 e 5."
+                message: "O campo 'priority' deve ser um número inteiro maior ou igual a 0."
             };
         }
         priority = data.priority;
@@ -260,12 +260,12 @@ export function validateUpdateApplication(data) {
         sanitizedData.status = status;
     }
 
-    // Atualização de priority
+    // Atualização de priority (número ordinal >= 0)
     if (data.priority !== undefined) {
-        if (!Number.isInteger(data.priority) || data.priority < 0 || data.priority > 5) {
+        if (!Number.isInteger(data.priority) || data.priority < 0) {
             return {
                 status: 'error',
-                message: "O campo 'priority' deve ser um número inteiro entre 0 e 5."
+                message: "O campo 'priority' deve ser um número inteiro maior ou igual a 0."
             };
         }
         sanitizedData.priority = data.priority;
