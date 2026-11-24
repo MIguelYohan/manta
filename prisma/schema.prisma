@@ -36,6 +36,7 @@ model Application {
   priority    Int      @default(0)
   resumeUrl   String?
   notes       String?
+  specialTags String[]
 
   user        User     @relation(fields: [userId], references: [id])
 
